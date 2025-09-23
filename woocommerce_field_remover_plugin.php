@@ -35,8 +35,8 @@ class WC_Field_Remover {
      * Constructor
      */
     public function __construct() {
-        // Initialize immediately when class is instantiated
-        $this->init();
+        // Don't call init() here to avoid double initialization
+        // Initialization will be handled by the plugins_loaded hook
     }
     
     /**
@@ -46,11 +46,11 @@ class WC_Field_Remover {
         // Load text domain
         load_plugin_textdomain('wc-field-remover', false, dirname(plugin_basename(__FILE__)) . '/languages');
         
-        // Hook into WooCommerce checkout fields
-        add_filter('woocommerce_checkout_fields', array($this, 'remove_checkout_fields'));
+        // Hook into WooCommerce checkout fields with priority
+        add_filter('woocommerce_checkout_fields', array($this, 'remove_checkout_fields'), 10);
         
-        // Add admin notice if WooCommerce is not active
-        add_action('admin_notices', array($this, 'woocommerce_missing_notice'));
+        // Add admin notice if WooCommerce is not active with priority
+        add_action('admin_notices', array($this, 'woocommerce_missing_notice'), 10);
     }
     
     /**
@@ -86,6 +86,11 @@ class WC_Field_Remover {
      * Display admin notice if WooCommerce is not active
      */
     public function woocommerce_missing_notice() {
+        // Check if user has capability to see admin notices
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        
         if (!class_exists('WooCommerce')) {
             $class = 'notice notice-error is-dismissible';
             $message = __('WooCommerce Field Remover requires WooCommerce to be installed and active.', 'wc-field-remover');
